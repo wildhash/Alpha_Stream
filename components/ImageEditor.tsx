@@ -54,7 +54,9 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ onClose, onImageUpdate }) => 
     try {
         const base64Image = await fileToBase64(file);
         const editedBase64 = await editImageWithPrompt(base64Image, file.type, prompt);
-        setEditedImage(`data:${file.type};base64,${editedBase64}`);
+        // Sanitize the data URL to prevent XSS
+        const sanitizedType = file.type.replace(/[^a-zA-Z0-9/+-]/g, '');
+        setEditedImage(`data:${sanitizedType};base64,${editedBase64}`);
     } catch (err) {
         console.error("Image editing failed:", err);
         setError("Failed to edit image. Please try again.");
