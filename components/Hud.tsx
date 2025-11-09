@@ -1,89 +1,56 @@
-
 import React from 'react';
-import { GameState } from '../types';
-import { DollarSignIcon, TrendingUpIcon, ClockIcon } from './icons/HudIcons';
+import type { PlayerStats, GameEffect } from '../types';
+import { Gem } from 'lucide-react';
+import AlphaPulse from './AlphaPulse';
 
 interface HudProps {
-  gameState: GameState;
-  currentRidePnl: number;
+  stats: PlayerStats;
+  activeEffects: GameEffect[];
+  marketPulse: number;
 }
 
-const formatScore = (score: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(score);
-};
-
-const RideInfo: React.FC<{ ride: GameState['currentRide'], pnl: number }> = ({ ride, pnl }) => {
-    if (!ride) return null;
-
-    const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
-    const rideType = ride.platform.isOpportunity ? 'LONG' : 'SHORT';
-    const rideTypeColor = ride.platform.isOpportunity ? 'text-green-400' : 'text-red-400';
-
+const StatBox: React.FC<{ title: string; value: string | React.ReactNode; subtext?: string; valueColor: string; }> = ({ title, value, subtext, valueColor }) => {
     return (
-        <div className="bg-gray-900/60 p-3 rounded-md border border-gray-700 font-mono text-sm">
-            <div className="flex justify-between items-center">
-                <span className="text-gray-400">RIDE:</span>
-                <span className={`font-bold ${rideTypeColor}`}>{ride.platform.asset.symbol} {rideType}</span>
+        <div 
+            className="w-40 h-24 p-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md flex flex-col justify-between transition-all duration-300"
+        >
+            <div className="font-sans text-sm text-slate-500 uppercase tracking-wider">{title}</div>
+            <div>
+                <div className={`text-3xl font-bold font-sans ${valueColor}`}>{value}</div>
+                {subtext && <div className="text-xs text-slate-400 uppercase">{subtext}</div>}
             </div>
-            <div className="flex justify-between items-center mt-1">
-                <span className="text-gray-400">PNL:</span>
-                <span className={`font-bold ${pnlColor}`}>{formatScore(pnl)}</span>
-            </div>
-        </div>
-    );
-};
-
-const NewsTicker: React.FC<{ news: GameState['news'] }> = ({ news }) => {
-    if (news.length === 0) {
-        return <div className="text-sm text-gray-500 italic">Market quiet...</div>;
-    }
-    const latestNews = news[news.length - 1];
-    const impactColor = latestNews.impact > 0 ? 'text-green-400' : 'text-red-400';
-
-    return (
-        <div className="text-sm animate-fade-in">
-            <span className="font-bold text-cyan-400 mr-2">NEWS:</span>
-            <span className={`font-semibold ${impactColor}`}>{latestNews.asset.symbol}</span>
-            <span className="text-gray-300"> - {latestNews.headline}</span>
         </div>
     );
 }
 
-export const Hud: React.FC<HudProps> = ({ gameState, currentRidePnl }) => {
-  const { score, gameTime, currentRide, news } = gameState;
-
+const Hud: React.FC<HudProps> = ({ stats, activeEffects, marketPulse }) => {
   return (
-    <div className="absolute top-0 left-0 right-0 p-4 text-white font-space-grotesk z-10 flex justify-between items-start pointer-events-none">
-      {/* Left side: Score and Stats */}
-      <div className="space-y-3">
-        <div className="bg-gray-900/60 backdrop-blur-sm p-3 rounded-lg border border-gray-700 flex items-center space-x-3 shadow-lg">
-          <DollarSignIcon className="w-8 h-8 text-cyan-400" />
-          <div>
-            <div className="text-sm text-gray-400">BALANCE</div>
-            <div className="text-3xl font-bold tracking-wider">{formatScore(score)}</div>
-          </div>
+    <header className="w-full max-w-6xl mx-auto flex justify-center sm:justify-between items-start gap-4 p-4 z-20">
+      <div className="flex gap-4">
+        <StatBox title="Equity" value={`$${stats.equity.toFixed(2)}`} subtext="PAPER BALANCE" valueColor="text-sky-500" />
+        <StatBox title="STREAK" value={`${stats.streak}`} valueColor="text-amber-500" />
+        <StatBox 
+            title="Gemin" 
+            value={<span className="flex items-center gap-2">{stats.gemin} <Gem size={20}/></span>} 
+            valueColor="text-amber-500" 
+        />
+      </div>
+       <div className="flex-col items-center gap-2 hidden sm:flex">
+         <AlphaPulse pulse={marketPulse} />
+         <div className="flex gap-2 items-center h-10">
+          {activeEffects.map((effect) => (
+            <div key={effect.id} className="relative group flex items-center gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-md">
+              <effect.icon size={20} className={effect.type === 'powerup' ? 'text-green-500' : 'text-red-500'} />
+              <div className="absolute bottom-full mb-2 w-48 bg-slate-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <p className="font-bold">{effect.name}</p>
+                <p>{effect.description}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <RideInfo ride={currentRide} pnl={currentRidePnl} />
-      </div>
-
-      {/* Center: News Ticker */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-1/2 max-w-2xl bg-gray-900/60 backdrop-blur-sm p-3 rounded-lg border border-gray-700 shadow-lg text-center overflow-hidden">
-        <NewsTicker news={news} />
-      </div>
-
-      {/* Right side: Time and Momentum */}
-      <div className="bg-gray-900/60 backdrop-blur-sm p-3 rounded-lg border border-gray-700 flex items-center space-x-3 shadow-lg">
-        <ClockIcon className="w-8 h-8 text-cyan-400" />
-        <div>
-          <div className="text-sm text-gray-400">TIME</div>
-          <div className="text-3xl font-bold font-mono">{Math.floor(gameTime / 60).toString().padStart(2, '0')}:{(gameTime % 60).toString().padStart(2, '0')}</div>
-        </div>
-      </div>
-    </div>
+       </div>
+    </header>
   );
 };
+
+export default Hud;
